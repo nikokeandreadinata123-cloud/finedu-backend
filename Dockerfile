@@ -1,13 +1,13 @@
-# ============================================================
-#  FinEdu Backend - Dockerfile (Railway)
-# ============================================================
-
 FROM php:8.2-apache
 
 # Install ekstensi mysqli
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
-# Aktifkan mod_rewrite untuk .htaccess
+# Nonaktifkan semua MPM dulu, lalu aktifkan hanya prefork
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork
+
+# Aktifkan mod_rewrite dan headers
 RUN a2enmod rewrite headers
 
 # Izinkan .htaccess override
@@ -20,7 +20,6 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Expose port (Railway akan override lewat env PORT)
 EXPOSE 80
 
 CMD ["apache2-foreground"]
