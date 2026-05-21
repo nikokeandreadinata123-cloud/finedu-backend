@@ -1,20 +1,16 @@
-# ============================================================
-#  FinEdu Backend - .htaccess
-#  Kompatibel: Apache (Railway) & Vercel PHP Runtime
-# ============================================================
-
 Options -Indexes
-
-# Aktifkan RewriteEngine
 RewriteEngine On
 
-# Handle preflight CORS OPTIONS di level server
+# Handle preflight CORS OPTIONS
 RewriteCond %{REQUEST_METHOD} OPTIONS
 RewriteRule ^(.*)$ $1 [R=200,L]
 
-# Paksa semua request ke HTTPS (aktifkan jika hosting sudah pakai SSL)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# CORS Headers untuk semua request
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
 
 # Izinkan akses ke file PHP langsung
 RewriteCond %{REQUEST_FILENAME} -f
