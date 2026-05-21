@@ -1,7 +1,33 @@
 <?php
 // ============================================================
-//  CORS HEADERS - Wajib paling atas sebelum apapun
+//  KONFIGURASI DATABASE (AUTO-DETECT)
 // ============================================================
+
+// 1. Cek apakah berjalan di Railway (Railway menyediakan variabel environment otomatis)
+if (getenv('MYSQLHOST')) {
+    $db_host = getenv('MYSQLHOST');
+    $db_user = getenv('MYSQLUSER');
+    $db_pass = getenv('MYSQLPASSWORD');
+    $db_name = getenv('MYSQLDATABASE');
+    $db_port = getenv('MYSQLPORT') ?: "3306";
+} else {
+    // 2. Jika tidak di Railway, gunakan settingan manual / lokal (XAMPP)
+    $db_host = "localhost";
+    $db_user = "root";
+    $db_pass = "";
+    $db_name = "finedu_db";
+    $db_port = "3306";
+}
+
+// ============================================================
+//  KONEKSI - jangan ubah bagian ini
+// ============================================================
+
+error_reporting(0);
+ini_set('display_errors', 0);
+ob_start();
+
+// CORS Headers - Wajib untuk Vercel
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
@@ -12,31 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// ============================================================
-//  KONFIGURASI DATABASE (AUTO-DETECT: Railway / Vercel / Lokal)
-// ============================================================
-
-// Railway menyediakan env otomatis: MYSQLHOST, MYSQLUSER, dst.
-// Vercel bisa pakai env yang di-set manual di dashboard Vercel.
-// Keduanya akan terbaca lewat getenv() atau $_ENV.
-
-$db_host = getenv('MYSQLHOST')     ?: getenv('DB_HOST')     ?: 'localhost';
-$db_user = getenv('MYSQLUSER')     ?: getenv('DB_USER')     ?: 'root';
-$db_pass = getenv('MYSQLPASSWORD') ?: getenv('DB_PASSWORD') ?: '';
-$db_name = getenv('MYSQLDATABASE') ?: getenv('DB_NAME')     ?: 'finedu_db';
-$db_port = getenv('MYSQLPORT')     ?: getenv('DB_PORT')     ?: '3306';
-
-// ============================================================
-//  KONEKSI
-// ============================================================
-
-error_reporting(0);
-ini_set('display_errors', 0);
-ob_start();
-
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name, (int)$db_port);
+// Koneksi ke database
+$conn = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
 
 if ($conn->connect_error) {
+    if (!headers_sent()) {
+        header("Content-Type: application/json");
+    }
     http_response_code(500);
     echo json_encode([
         "status"  => "error",
