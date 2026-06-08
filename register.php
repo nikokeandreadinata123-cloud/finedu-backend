@@ -42,6 +42,7 @@ $stmt->execute();
 $stmt->store_result();
 
 if ($stmt->num_rows > 0) {
+    http_response_code(409);
     echo json_encode(["status" => "error", "message" => "Email sudah digunakan"]);
     $stmt->close();
     exit();
@@ -59,8 +60,12 @@ if ($stmt->execute()) {
     $new_user_id = $conn->insert_id;
     $stmt->close();
 
-    // ✅ Generate token langsung agar frontend bisa auto-login ke dashboard
+    // Generate token & SIMPAN ke database
     $token = bin2hex(random_bytes(32));
+    $stmtToken = $conn->prepare("UPDATE users SET token = ? WHERE id = ?");
+    $stmtToken->bind_param("si", $token, $new_user_id);
+    $stmtToken->execute();
+    $stmtToken->close();
 
     echo json_encode([
         "status"  => "success",
@@ -68,7 +73,7 @@ if ($stmt->execute()) {
         "token"   => $token,
         "streak"  => 1,
         "user"    => [
-            "id"    => $new_user_id,
+            "id"    => (int)$new_user_id,
             "name"  => $name,
             "email" => $email,
             "phone" => $phone,
