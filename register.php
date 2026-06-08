@@ -1,28 +1,30 @@
 <?php
+// CORS Headers - harus sebelum apapun
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json");
 
+// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
+include 'db.php';
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["status" => "error", "message" => "Method tidak diizinkan"]);
     exit();
 }
 
-include 'db.php';
-
+// Ambil JSON
 $raw  = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
+// VALIDASI JSON
 if (!$data) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Body request tidak valid (bukan JSON)"]);
+    echo json_encode(["status" => "error", "message" => "Data tidak valid"]);
     exit();
 }
 
@@ -31,49 +33,43 @@ $email    = trim($data["email"]    ?? "");
 $phone    = trim($data["phone"]    ?? "");
 $password = trim($data["password"] ?? "");
 
+// Validasi field wajib
 if (!$name || !$email || !$password) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Field name, email, dan password wajib diisi"]);
+    echo json_encode(["status" => "error", "message" => "Field wajib tidak boleh kosong"]);
     exit();
 }
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Format email tidak valid"]);
-    exit();
-}
-
-// Cek duplikat email
+// Cek email sudah dipakai
 $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->store_result();
 
 if ($stmt->num_rows > 0) {
-    http_response_code(409);
     echo json_encode(["status" => "error", "message" => "Email sudah digunakan"]);
     $stmt->close();
     exit();
 }
 $stmt->close();
 
-// Insert user baru
+// Hash password & insert user baru
+// ✅ streak = 0 dan last_login_date = NULL otomatis karena DEFAULT di kolom
 $hash = password_hash($password, PASSWORD_BCRYPT);
-$stmt = $conn->prepare("INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO users (name, email, phone, password, streak, last_login_date) VALUES (?, ?, ?, ?, 0, NULL)");
 $stmt->bind_param("ssss", $name, $email, $phone, $hash);
 
 if ($stmt->execute()) {
-    http_response_code(201);
+    // User baru berhasil dibuat, streak mulai dari 0
     echo json_encode([
         "status"  => "success",
-        "message" => "Registrasi berhasil",
-        "user_id" => (int)$conn->insert_id
+        "message" => "Registrasi berhasil. Selamat datang di FinEdu!"
     ]);
 } else {
-    http_response_code(500);
-    echo json_encode(["status" => "error", "message" => "Gagal menyimpan data"]);
+    echo json_encode([
+        "status"  => "error",
+        "message" => "Gagal menyimpan data: " . $conn->error
+    ]);
 }
 
 $stmt->close();
 $conn->close();
-?>
