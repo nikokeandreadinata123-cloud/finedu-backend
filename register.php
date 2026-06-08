@@ -5,7 +5,6 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json");
 
-// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -18,11 +17,9 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit();
 }
 
-// Ambil JSON
 $raw  = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
-// VALIDASI JSON
 if (!$data) {
     echo json_encode(["status" => "error", "message" => "Data tidak valid"]);
     exit();
@@ -33,7 +30,6 @@ $email    = trim($data["email"]    ?? "");
 $phone    = trim($data["phone"]    ?? "");
 $password = trim($data["password"] ?? "");
 
-// Validasi field wajib
 if (!$name || !$email || !$password) {
     echo json_encode(["status" => "error", "message" => "Field wajib tidak boleh kosong"]);
     exit();
@@ -52,24 +48,38 @@ if ($stmt->num_rows > 0) {
 }
 $stmt->close();
 
-// Hash password & insert user baru
-// ✅ streak = 0 dan last_login_date = NULL otomatis karena DEFAULT di kolom
-$hash = password_hash($password, PASSWORD_BCRYPT);
-$stmt = $conn->prepare("INSERT INTO users (name, email, phone, password, streak, last_login_date) VALUES (?, ?, ?, ?, 0, NULL)");
-$stmt->bind_param("ssss", $name, $email, $phone, $hash);
+// Hash password & insert user baru, streak langsung 1 karena hari pertama
+$hash  = password_hash($password, PASSWORD_BCRYPT);
+$today = date('Y-m-d');
+
+$stmt = $conn->prepare("INSERT INTO users (name, email, phone, password, streak, last_login_date) VALUES (?, ?, ?, ?, 1, ?)");
+$stmt->bind_param("sssss", $name, $email, $phone, $hash, $today);
 
 if ($stmt->execute()) {
-    // User baru berhasil dibuat, streak mulai dari 0
+    $new_user_id = $conn->insert_id;
+    $stmt->close();
+
+    // ✅ Generate token langsung agar frontend bisa auto-login ke dashboard
+    $token = bin2hex(random_bytes(32));
+
     echo json_encode([
         "status"  => "success",
-        "message" => "Registrasi berhasil. Selamat datang di FinEdu!"
+        "message" => "Registrasi berhasil. Selamat datang di FinEdu!",
+        "token"   => $token,
+        "streak"  => 1,
+        "user"    => [
+            "id"    => $new_user_id,
+            "name"  => $name,
+            "email" => $email,
+            "phone" => $phone,
+        ]
     ]);
 } else {
     echo json_encode([
         "status"  => "error",
         "message" => "Gagal menyimpan data: " . $conn->error
     ]);
+    $stmt->close();
 }
 
-$stmt->close();
 $conn->close();
