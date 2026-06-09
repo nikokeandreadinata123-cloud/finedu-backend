@@ -1,4 +1,6 @@
 <?php
+date_default_timezone_set('Asia/Jakarta'); // ✅ Fix timezone WIB
+
 // CORS Headers - harus sebelum apapun
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
@@ -72,11 +74,14 @@ if ($stmt->execute()) {
         "message" => "Registrasi berhasil. Selamat datang di FinEdu!",
         "token"   => $token,
         "streak"  => 1,
+        "last_login_date" => $today,       // ✅ tambah last_login_date
         "user"    => [
-            "id"    => (int)$new_user_id,
-            "name"  => $name,
-            "email" => $email,
-            "phone" => $phone,
+            "id"              => (int)$new_user_id,
+            "name"            => $name,
+            "email"           => $email,
+            "phone"           => $phone,
+            "streak"          => 1,        // ✅ streak ikut di user object
+            "last_login_date" => $today,   // ✅ last_login_date ikut di user object
         ]
     ]);
 } else {
