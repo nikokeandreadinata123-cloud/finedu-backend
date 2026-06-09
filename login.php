@@ -1,4 +1,6 @@
 <?php
+date_default_timezone_set('Asia/Jakarta'); // ✅ Fix timezone WIB
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
@@ -74,12 +76,14 @@ echo json_encode([
     "message"         => "Login berhasil",
     "token"           => $token,
     "streak"          => $new_streak,
-    "last_login_date" => $today,   // ✅ dikirim ke frontend untuk disimpan di localStorage
+    "last_login_date" => $today,
     "user"            => [
-        "id"    => $user['id'],
-        "name"  => $user['name'],
-        "email" => $user['email'],
-        "phone" => $user['phone'],
+        "id"              => $user['id'],
+        "name"            => $user['name'],
+        "email"           => $user['email'],
+        "phone"           => $user['phone'],
+        "streak"          => $new_streak,          // ✅ streak ikut di dalam user object
+        "last_login_date" => $today,               // ✅ last_login_date ikut di dalam user object
     ]
 ]);
 
