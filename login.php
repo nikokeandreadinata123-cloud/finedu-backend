@@ -88,5 +88,3 @@ echo json_encode([
 ]);
 
 $conn->close();
-
-// fix streak v2
